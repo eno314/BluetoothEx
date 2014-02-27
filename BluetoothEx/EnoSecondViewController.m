@@ -42,6 +42,7 @@
     NSLog( @"[characteristicUUID.description] %@", characteristicUUID.description );
     
     // characteristicの生成
+    /*
     uint    battery_level = 39;
     NSData *dataBatteryLevel = [NSData dataWithBytes:&battery_level length:sizeof(battery_level)];
     self.characteristic      = [[CBMutableCharacteristic alloc]
@@ -49,12 +50,20 @@
                                 properties:CBCharacteristicPropertyRead
                                 value:dataBatteryLevel
                                 permissions:CBAttributePermissionsReadable];
+    */
+    NSString *data = @"data";
+    self.characteristic = [[CBMutableCharacteristic alloc]
+                           initWithType:characteristicUUID
+                           properties:CBCharacteristicPropertyRead
+                           value:[data dataUsingEncoding:NSUTF8StringEncoding]
+                           permissions:CBAttributePermissionsReadable];
     
     // service UUIDの生成
     CBUUID *serviceUUID = [CBUUID UUIDWithString:SERVICE_UUID];
     
     // serviceの生成（主サービス）
     self.service = [[CBMutableService alloc] initWithType:serviceUUID primary:YES];
+    NSLog( @"service uuid : %@", self.service.UUID );
     
     // サービスにcharacteristicsをセット
     [self.service setCharacteristics:@[self.characteristic]];
@@ -128,9 +137,10 @@
         return;
     }
     
+    NSDictionary *dict = @{CBAdvertisementDataServiceUUIDsKey: @[[CBUUID UUIDWithString:SERVICE_UUID]]};
+    
     // サービスをアドバタイズする
-    [self.peripheralManager startAdvertising:@{CBAdvertisementDataLocalNameKey: @"mokyu",
-                                               CBAdvertisementDataSolicitedServiceUUIDsKey: SERVICE_UUID}];
+    [self.peripheralManager startAdvertising:dict];
     
     NSLog( @"START ADVERTISING!!!" );
 }

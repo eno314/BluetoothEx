@@ -43,9 +43,10 @@
     switch ( central.state ) {
         case CBCentralManagerStatePoweredOn:
             NSLog( @"%@", @"CBCentralManagerStatePoweredOn" );
-            // 単一デバイスの発見イベントを重複して発行させない
+            // ペリフェラルの走査開始（単一デバイスの発見イベントを重複して発行させない）
             [self.centralManager
-             scanForPeripheralsWithServices:@[ [CBUUID UUIDWithString:SERVICE_UUID] ]
+             // scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:SERVICE_UUID]]
+             scanForPeripheralsWithServices:nil
              options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @YES}];
             break;
             
@@ -164,7 +165,7 @@
         return;
     }
     
-    if ( [service.UUID isEqual:[CBUUID UUIDWithString:CHARACTERISTIC_UUID]] ) {
+    if ( [service.UUID isEqual:[CBUUID UUIDWithString:SERVICE_UUID]] ) {
         
         for ( CBCharacteristic *characteristic in service.characteristics ) {
             
@@ -194,6 +195,8 @@
     NSLog( @"no error" );
     
     NSData *data = characteristic.value;
+    NSLog( @"[data] %@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] );
+    /*
     int     mog  = *(int *)([data bytes]);
     
     NSLog( @"[data] %d", mog );
@@ -203,7 +206,8 @@
     [data2 increaseLengthBy:8];
     [data2 getBytes:&value length:sizeof(value)];
     
-    NSLog( @"[data] %d", value );
+    NSLog( @"[value] %d", value );
+    */
     
     [self.centralManager cancelPeripheralConnection:peripheral];
 }
