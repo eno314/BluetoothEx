@@ -21,6 +21,7 @@
 {
     [super viewDidLoad];
     
+    // ペリフェラルマネージャを起動
     self.peripheralManager = [[CBPeripheralManager alloc] initWithDelegate:self queue:nil];
 }
 
@@ -52,13 +53,13 @@
     // service UUIDの生成
     CBUUID *serviceUUID = [CBUUID UUIDWithString:SERVICE_UUID];
     
-    // serviceの生成
+    // serviceの生成（主サービス）
     self.service = [[CBMutableService alloc] initWithType:serviceUUID primary:YES];
     
     // サービスにcharacteristicsをセット
     [self.service setCharacteristics:@[self.characteristic]];
     
-    // Publish the sercice
+    // サービスの登録
     [self.peripheralManager addService:self.service];
 }
 
@@ -72,28 +73,28 @@
     switch ( peripheral.state ) {
         case CBPeripheralManagerStatePoweredOn:
             // PowerOnならデバイスのセットアップをする
-            NSLog( @"%d CBPeripheralManagerStatePoweredOn", peripheral.state );
+            NSLog( @"%@", @"CBPeripheralManagerStatePoweredOn" );
             [self setupService];
             break;
             
         case CBPeripheralManagerStatePoweredOff:
-            NSLog( @"%d CBPeripheralManagerStatePoweredOff", peripheral.state );
+            NSLog( @"%@", @"CBPeripheralManagerStatePoweredOff" );
             break;
             
         case CBPeripheralManagerStateResetting:
-            NSLog( @"%d CBPeripheralManagerStateResetting", peripheral.state );
+            NSLog( @"%@", @"CBPeripheralManagerStateResetting" );
             break;
             
         case CBPeripheralManagerStateUnauthorized:
-            NSLog( @"%d CBPeripheralManagerStateUnauthorized", peripheral.state );
+            NSLog( @"%@", @"CBPeripheralManagerStateUnauthorized" );
             break;
             
         case CBPeripheralManagerStateUnsupported:
-            NSLog( @"%d CBPeripheralManagerStateUnsupported", peripheral.state );
+            NSLog( @"%@", @"CBPeripheralManagerStateUnsupported" );
             break;
             
         case CBPeripheralManagerStateUnknown:
-            NSLog( @"%d CBPeripheralManagerStateUnknown", peripheral.state );
+            NSLog( @"%@", @"CBPeripheralManagerStateUnknown" );
             break;
             
         default:
@@ -104,10 +105,13 @@
 /**
  * peripheralManagerがシステムによってリストアされようとする直前に呼ばれる
  */
+/* warning が出るのでいったん消す
+ http://stackoverflow.com/questions/20956880/corebluetoothwarning-has-no-restore-identifier-but-the-delegate-implements
 - (void)peripheralManager:(CBPeripheralManager *)peripheral willRestoreState:(NSDictionary *)dict
 {
     NSLog( @"%@", NSStringFromSelector(_cmd) );
 }
+*/
 
 /**
  * serveceが追加されたとき
@@ -124,6 +128,7 @@
         return;
     }
     
+    // サービスをアドバタイズする
     [self.peripheralManager startAdvertising:@{CBAdvertisementDataLocalNameKey: @"mokyu",
                                                CBAdvertisementDataSolicitedServiceUUIDsKey: SERVICE_UUID}];
     

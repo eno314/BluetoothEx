@@ -15,18 +15,90 @@
 
 @end
 
+/**
+ * FirstViewでセントラルマネージャーとなる
+ */
 @implementation EnoFirstViewController
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     
-    self.centralManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil];
+    // セントラルマネージャーの起動
+    self.centralManager = [[CBCentralManager alloc] initWithDelegate:self queue:nil options:nil];
 }
 
 - (void)didReceiveMemoryWarning
 {
     [super didReceiveMemoryWarning];
+}
+
+/**
+ * centralManagerが初期化されたり、状態が変化した時
+ */
+- (void)centralManagerDidUpdateState:(CBCentralManager *)central
+{
+    NSLog( @"%@", NSStringFromSelector(_cmd) );
+    
+    switch ( central.state ) {
+        case CBCentralManagerStatePoweredOn:
+            NSLog( @"%@", @"CBCentralManagerStatePoweredOn" );
+            // 単一デバイスの発見イベントを重複して発行させない
+            [self.centralManager
+             scanForPeripheralsWithServices:@[ [CBUUID UUIDWithString:SERVICE_UUID] ]
+             options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @YES}];
+            break;
+            
+        case CBCentralManagerStatePoweredOff:
+            NSLog( @"%@", @"CBCentralManagerStatePoweredOff" );
+            break;
+            
+        case CBCentralManagerStateResetting:
+            NSLog( @"%@", @"CBCentralManagerStateResetting" );
+            break;
+            
+        case CBCentralManagerStateUnauthorized:
+            NSLog( @"%@", @"CBCentralManagerStateUnauthorized" );
+            break;
+            
+        case CBCentralManagerStateUnsupported:
+            NSLog( @"%@", @"CBCentralManagerStateUnsupported" );
+            break;
+            
+        case CBCentralManagerStateUnknown:
+            NSLog( @"%@", @"CBCentralManagerStateUnknown" );
+            break;
+            
+        default:
+            break;
+    }
+}
+
+/**
+ * デバイス発見時
+ */
+- (void)centralManager:(CBCentralManager *)central
+        didDiscoverPeripheral:(CBPeripheral *)peripheral
+        advertisementData:(NSDictionary *)advertisementData
+        RSSI:(NSNumber *)RSSI
+{
+    NSLog( @"%@", NSStringFromSelector(_cmd) );
+    
+    NSLog( @"Discovered %@", peripheral.name );
+    
+    // 省電力のため、他のペリフェラルの走査は停止する
+    [self.centralManager stopScan];
+    NSLog(@"Scanning stopped");
+    
+    NSLog( @"[RSSI] %@", RSSI );
+    
+    if ( self.peripheral != peripheral ) {
+        
+        // 発見されたデバイスに接続
+        self.peripheral = peripheral;
+        NSLog( @"Connecting to pripheral %@", peripheral );
+        [self.centralManager connectPeripheral:peripheral options:nil];
+    }
 }
 
 /**
@@ -41,128 +113,11 @@
     // データの初期化
     [self.data setLength:0];
     
-    [self.peripheral setDelegate:self];
+    // デリゲート設定
+    self.peripheral.delegate = self;
     
     // サービスの探索を開始
     [self.peripheral discoverServices:@[ [CBUUID UUIDWithString:SERVICE_UUID] ]];
-}
-
-/**
- * ペリフェラルの接続が切れたとき
- */
-- (void)centralManager:(CBCentralManager *)central
-        didDisconnectPeripheral:(CBPeripheral *)peripheral
-        error:(NSError *)error
-{
-    NSLog( @"%@", NSStringFromSelector(_cmd) );
-    
-    if ( error ) {
-        
-        NSLog( @"[error] %@", [error localizedDescription] );
-        NSLog( @"[error] %@", [error localizedFailureReason] );
-        NSLog( @"[error] %@", [error localizedRecoverySuggestion] );
-    }
-    
-    NSLog( @"disconnect" );
-}
-
-/**
- * デバイス発見時
- */
-- (void)centralManager:(CBCentralManager *)central
-        didDiscoverPeripheral:(CBPeripheral *)peripheral
-        advertisementData:(NSDictionary *)advertisementData
-        RSSI:(NSNumber *)RSSI
-{
-    NSLog( @"%@", NSStringFromSelector(_cmd) );
-    
-    [self.centralManager stopScan];
-    
-    NSLog( @"[RSSI] %@", RSSI );
-    
-    if ( self.peripheral != peripheral ) {
-        
-        // 発見されたデバイスに接続
-        self.peripheral = peripheral;
-        NSLog( @"Connecting to pripheral %@", peripheral );
-        [self.centralManager connectPeripheral:peripheral options:nil];
-    }
-}
-
-/**
- * 接続失敗時
- */
-- (void)centralManager:(CBCentralManager *)central
-        didFailToConnectPeripheral:(CBPeripheral *)peripheral
-        error:(NSError *)error
-{
-    NSLog( @"%@", NSStringFromSelector(_cmd) );
-}
-
-/**
- * 接続済みのペリフェラルを見つけたとき
- */
-- (void)centralManager:(CBCentralManager *)central didRetrieveConnectedPeripherals:(NSArray *)peripherals
-{
-    NSLog( @"%@", NSStringFromSelector(_cmd) );
-}
-
-/**
- * centralManagerが知っているペリフェラルを見つけたとき
- */
-- (void)centralManager:(CBCentralManager *)central didRetrievePeripherals:(NSArray *)peripherals
-{
-    NSLog( @"%@", NSStringFromSelector(_cmd) );
-}
-
-/**
- * centralManagerが初期化されたり、状態が変化した時
- */
-- (void)centralManagerDidUpdateState:(CBCentralManager *)central
-{
-    NSLog( @"%@", NSStringFromSelector(_cmd) );
-    
-    switch ( central.state ) {
-        case CBCentralManagerStatePoweredOn:
-            NSLog( @"%d, CBCentralManagerStatePoweredOn", central.state );
-            
-            // 単一デバイスの発見イベントを重複して発行させない
-            [self.centralManager
-             scanForPeripheralsWithServices:@[ [CBUUID UUIDWithString:SERVICE_UUID] ]
-             options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @YES}];
-            break;
-            
-        case CBCentralManagerStatePoweredOff:
-            NSLog( @"%d, CBCentralManagerStatePoweredOff", central.state );
-            break;
-            
-        case CBCentralManagerStateResetting:
-            NSLog( @"%d, CBCentralManagerStateResetting", central.state );
-            break;
-            
-        case CBCentralManagerStateUnauthorized:
-            NSLog( @"%d, CBCentralManagerStateUnauthorized", central.state );
-            break;
-            
-        case CBCentralManagerStateUnsupported:
-            NSLog( @"%d, CBCentralManagerStateUnsupported", central.state );
-            break;
-            
-        case CBCentralManagerStateUnknown:
-            NSLog( @"%d, CBCentralManagerStateUnknown", central.state );
-            break;
-            
-        default:
-            break;
-    }
-}
-
-/**
- * centralManagerがリストアされる直前
- */
-- (void)centralManager:(CBCentralManager *)central willRestoreState:(NSDictionary *)dict
-{
-    NSLog( @"%@", NSStringFromSelector(_cmd) );
 }
 
 /**
@@ -185,21 +140,13 @@
         if ( [service.UUID isEqual:[CBUUID UUIDWithString:SERVICE_UUID] ] ) {
             
             NSLog( @"discover characteristic!" );
+            
+            // サービスの特性を検出する
             [self.peripheral
              discoverCharacteristics:@[[CBUUID UUIDWithString:CHARACTERISTIC_UUID]]
              forService:service];
         }
     }
-}
-
-/**
- * 指定したサービスを見つけた
- */
-- (void)peripheral:(CBPeripheral *)peripheral
-        didDiscoverIncludedServicesForService:(CBService *)service
-        error:(NSError *)error
-{
-    NSLog( @"%@", NSStringFromSelector(_cmd) );
 }
 
 /**
@@ -222,19 +169,11 @@
         for ( CBCharacteristic *characteristic in service.characteristics ) {
             
             NSLog( @"characteristices is found!" );
+            
+            // 特性の値を読み取る
             [peripheral readValueForCharacteristic:characteristic];
         }
     }
-}
-
-/**
- * characteristicのdescriptionが見つかった
- */
-- (void)peripheral:(CBPeripheral *)peripheral
-        didDiscoverDescriptorsForCharacteristic:(CBCharacteristic *)characteristic
-        error:(NSError *)error
-{
-    NSLog( @"%@", NSStringFromSelector(_cmd) );
 }
 
 /**
@@ -267,6 +206,82 @@
     NSLog( @"[data] %d", value );
     
     [self.centralManager cancelPeripheralConnection:peripheral];
+}
+
+/**
+ * ペリフェラルの接続が切れたとき
+ */
+- (void)centralManager:(CBCentralManager *)central
+        didDisconnectPeripheral:(CBPeripheral *)peripheral
+        error:(NSError *)error
+{
+    NSLog( @"%@", NSStringFromSelector(_cmd) );
+    
+    if ( error ) {
+        
+        NSLog( @"[error] %@", [error localizedDescription] );
+        NSLog( @"[error] %@", [error localizedFailureReason] );
+        NSLog( @"[error] %@", [error localizedRecoverySuggestion] );
+    }
+    
+    NSLog( @"disconnect" );
+}
+
+/**
+ * 接続失敗時
+ */
+- (void)centralManager:(CBCentralManager *)central
+        didFailToConnectPeripheral:(CBPeripheral *)peripheral
+        error:(NSError *)error
+{
+    NSLog( @"%@", NSStringFromSelector(_cmd) );
+}
+
+/**
+ * 接続済みのペリフェラルを見つけたとき
+ */
+- (void)centralManager:(CBCentralManager *)central didRetrieveConnectedPeripherals:(NSArray *)peripherals
+{
+    NSLog( @"%@", NSStringFromSelector(_cmd) );
+}
+
+/**
+ * centralManagerが知っているペリフェラルを見つけたとき
+ */
+- (void)centralManager:(CBCentralManager *)central didRetrievePeripherals:(NSArray *)peripherals
+{
+    NSLog( @"%@", NSStringFromSelector(_cmd) );
+}
+
+/**
+ * centralManagerがリストアされる直前
+ */
+/* warning が出るのでいったん消す 
+ http://stackoverflow.com/questions/20956880/corebluetoothwarning-has-no-restore-identifier-but-the-delegate-implements
+- (void)centralManager:(CBCentralManager *)central willRestoreState:(NSDictionary *)dict
+{
+    NSLog( @"%@", NSStringFromSelector(_cmd) );
+}
+*/
+
+/**
+ * 指定したサービスを見つけた
+ */
+- (void)peripheral:(CBPeripheral *)peripheral
+        didDiscoverIncludedServicesForService:(CBService *)service
+        error:(NSError *)error
+{
+    NSLog( @"%@", NSStringFromSelector(_cmd) );
+}
+
+/**
+ * characteristicのdescriptionが見つかった
+ */
+- (void)peripheral:(CBPeripheral *)peripheral
+        didDiscoverDescriptorsForCharacteristic:(CBCharacteristic *)characteristic
+        error:(NSError *)error
+{
+    NSLog( @"%@", NSStringFromSelector(_cmd) );
 }
 
 /**
